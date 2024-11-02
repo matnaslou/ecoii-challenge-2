@@ -1,9 +1,12 @@
 ##########################################################################
 rm(list=ls(all=TRUE))
-
+library(xtable)
 
 # Definindo os anos para o loop
 anos <- c(2018, 2023)
+
+# Lista temporária para armazenar estatísticas para cada variável
+estatisticas <- list()
 
 # Loop para cada ano
 for (ano in anos) {  
@@ -182,27 +185,55 @@ for (ano in anos) {
                            & V3002A == "Rede pública" 
                            & V3003A == "Regular do ensino médio"  
                            & ((VD5008real_proprioano <= 660 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
-                           & VD2004 != "Unipessoal") 
+                           & VD2004 != "Unipessoal")
   
-  # Variable for Counting Observations
+  # Subset of people with 14 to 24 years that receives some cash transfer
+  pnad_yk <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
+                           & ((VD5008real_proprioano <= 660 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
+                           & VD2004 != "Unipessoal")
+    # Variable for Counting Observations
   pnad_24_01_PdM <- transform(pnad_24_01_PdM, contagem=1)
-  # Population of Beneficiaries Estimation
-  print(x=contagem_beneficiados <- survey::svybys(formula=~contagem, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Nome da variável que será criada para cada ano
-  var_name <- paste0("contagem_beneficiados_", ano)
-  
-  # Criando a variável `contagem_beneficiados` para cada ano usando `survey::svybys`
-  assign(var_name, survey::svybys(
-    formula = ~contagem,
-    by = ~Pais + GR + UF,
-    design = get(paste0("pnad_", "24", "_01_PdM")), # Obtenha o design do survey para cada ano
-    FUN = svytotal,
-    vartype = c("se", "cv"),
-    keep.names = FALSE,
-    na.rm = TRUE
-  ))
-  
-  # HIpc of Beneficiaries Estimation
-  print(x=rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-}
+  pnad_yk <- transform(pnad_yk, contagem=1)
+    # Population of Beneficiaries Estimation
+    #print(x=contagem_beneficiados <- survey::svybys(formula=~contagem, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
+    
+    # Nomes da variável que será criada para cada ano
+    var_name1 <- paste0("contagem_", ano, "_", str(pnad_24_01_PdM))
+    
+    # Criando a variável `contagem_beneficiados` para cada ano usando `survey::svybys`
+    assign(var_name1, survey::svybys(
+      formula = ~contagem,
+      by = ~Pais + GR + UF,
+      design = get(paste0("pnad_", "24", "_01_PdM")), # Obtenha o design do survey para cada ano
+      FUN = svytotal,
+      vartype = c("se", "cv"),
+      keep.names = FALSE,
+      na.rm = TRUE
+    ))
+    
+    variaveis <- c("V2007", "V2010", "VD4014","VD2006","VD5008real_proprioano")
+    
+    for (var in variaveis) {
+      # Calcula a proporção para cada variável usando svyby
+      estatisticas[[var]] <- svyby(as.formula(paste0("~", var)), 
+                                   ~Pais + GR + UF, 
+                                   design = pnad_24_01_PdM, 
+                                   svymean, 
+                                   vartype = c("se","cv"),
+                                   keep.names = FALSE,
+                                   na.rm = TRUE)
+      
+      # Adiciona o nome da variável e do ano ao resultado
+      estatisticas[[var]] <- estatisticas[[var]] %>%
+        mutate(variavel = var, ano = ano)
+    }
+    
+    # Combina todas as estatísticas de um ano em um único data frame
+    resultados_por_ano[[as.character(ano)]] <- bind_rows(estatisticas)    
+    
+    # HIpc of Beneficiaries Estimation
+    #print(x=rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
+}     
+
+# Combina todos os anos em uma única tabela
+tabela_final <- bind_rows(resultados_por_ano)
