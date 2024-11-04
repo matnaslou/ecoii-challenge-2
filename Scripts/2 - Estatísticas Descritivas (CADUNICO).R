@@ -1,13 +1,21 @@
 library(data.table)
-library(geobr)
 library(dplyr)
-library(sf)
 library(survey)
 library(stringr)
 
-cadunico <- fread("Base/base_amostra_pessoa_201812.csv")
+cadunico <- fread("C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/Desafio Eco II/Base/base_amostra_pessoa_201812.csv")
 #municipios <- read_municipality(year=2018,showProgress=TRUE)
 #estados <- read_state(year=2018,showProgress=TRUE)
+
+# Criando variáveis auxiliares para obtenção da estimativa desejada
+cadunico <- transform(cadunico, cod_ibge=paste0(cd_ibge))
+cadunico <- transform(cadunico, Pais=as.factor("Brasil"))
+cadunico$Pais <- factor(x=cadunico$Pais, levels=c("Brasil"))
+cadunico <- transform(cadunico, GR=as.factor(ifelse(substr(cod_ibge, start=1, stop=1)=="1","Norte",ifelse(substr(cod_ibge, start=1, stop=1)=="2","Nordeste",ifelse(substr(cod_ibge, start=1, stop=1)=="3","Sudeste",ifelse(substr(cod_ibge, start=1, stop=1)=="4","Sul",ifelse(substr(cod_ibge, start=1, stop=1)=="5","Centro-Oeste",NA)))))))
+cadunico$GR <- factor(x=cadunico$GR, levels=c("Norte","Nordeste","Sudeste","Sul","Centro-Oeste"))
+
+
+
 
 # Adjusting geobr data for merging
 #municipios$cd_ibge <- municipios$code_muni
@@ -41,10 +49,10 @@ svy_design <- transform(svy_design, contagem=1)
 svy_design <- subset(svy_design, ind_frequenta_escola_memb==1 & cod_curso_frequenta_memb == 7 &
                      idade >= 14 & idade <= 24)
 
-#svy_design <- transform(svy_design, Pais="Brasil")
-#svy_design <- transform(svy_design, Pais=as.factor("Brasil"))
-#svy_design$Pais <- factor(x=svy_design$Pais, levels=c("Brasil"))
 
 
 # Population of Beneficiaries Estimation
 print(survey::svytotal(x=~contagem, design=svy_design, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
+
+#print(survey::svybys(formula=~contagem, design=svy_design, bys = ~Pais+GR, FUN = svytotal vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
+#print(survey::svybys(formula=~contagem, design=svy_design, bys = ~Pais+GR, FUN = svytotal vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
