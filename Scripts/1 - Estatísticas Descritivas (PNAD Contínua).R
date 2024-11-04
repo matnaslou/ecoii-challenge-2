@@ -1,7 +1,7 @@
 ##########################################################################
 rm(list=ls(all=TRUE))
 library(xtable)
-
+library(dplyr)
 # Definindo os anos para o loop
 anos <- c(2018,2019,2022,2023)
 
@@ -304,7 +304,42 @@ for (ano in anos) {
     #resultados_por_ano_hab[[as.character(ano)]] <- bind_rows(estatisticas_hab)
     # HIpc of Beneficiaries Estimation
     #print(x=rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
+
+numeros <- c(1,2,3)
+
+
+for (ano in anos) {
+  for (x in numeros) {
+    var_name5 <- paste0("contagem_",ano)
+    var_name5A <- paste0(var_name5,"_",x)
+    var_name6 <- paste0("estats_",ano)
+    var_name6A <- paste0(var_name6,"_",x)
+    var_name7 <- paste0("estats_hab",ano)
+    var_name7A <- paste0(var_name7,"_",x)
     
+    assign(var_name5A, as.data.frame(get(var_name5)[[x]]))
+    assign(var_name6A, as.data.frame(get(var_name6)[[x]]))
+    if (ano != 2023) {
+      assign(var_name7A, as.data.frame(get(var_name7)[[x]]))
+    }
+        
+  }
+  }
+
+contagem_1 <- bind_rows(contagem_2018_1, contagem_2019_1, contagem_2022_1,contagem_2023_1)
+contagem_2 <- bind_rows(contagem_2018_2, contagem_2019_2, contagem_2022_2,contagem_2023_2)
+contagem <- bind_rows(contagem_1,contagem_2)
+estats_1 <- bind_rows(estats_2018_1, estats_2019_1, estats_2022_1,estats_2023_1)
+estats_2 <- bind_rows(estats_2018_2, estats_2019_2, estats_2022_2,estats_2023_2)
+estats <- bind_rows(estats_1,estats_2)
+estats_hab_1 <- bind_rows(estats_hab2018_1,estats_hab2019_1,estats_hab2022_1)
+estats_hab_2 <- bind_rows(estats_hab2018_2,estats_hab2019_2,estats_hab2022_2)
+estats_hab <- bind_rows(estats_hab_1,estats_hab_2)
+
+write.csv(contagem,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/contagem.csv",row.names = FALSE)
+write.csv(estats,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/estats.csv",row.names = FALSE)
+write.csv(estats_hab,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/estats_hab.csv",row.names = FALSE)
+
 
 # Combina todos os anos em uma única tabela
 #tabela_final <- bind_rows(resultados_por_ano)
