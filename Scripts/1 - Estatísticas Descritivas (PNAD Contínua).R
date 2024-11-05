@@ -228,12 +228,12 @@ for (ano in anos) {
                            & V3002 == "Sim"  
                            & V3002A == "Rede pública" 
                            & V3003A == "Regular do ensino médio"  
-                           & ((VD5008real_proprioano <= 660 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
+                           & ((VD5008real_proprioano <= salariominimo_proprioano/2 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
                            & VD2004 != "Unipessoal")
   
   # Subset of people with 14 to 24 years that receives some cash transfer
   pnad_yk <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
-                           & ((VD5008real_proprioano <= 660 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
+                           & ((VD5008real_proprioano <= salariominimo_proprioano/2 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
                            & VD2004 != "Unipessoal")
     # Variable for Counting Observations
   pnad_24_01_PdM <- transform(pnad_24_01_PdM, contagem=1)
