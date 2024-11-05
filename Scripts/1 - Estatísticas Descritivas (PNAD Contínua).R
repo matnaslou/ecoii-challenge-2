@@ -4,7 +4,7 @@ library(xtable)
 library(dplyr)
 # Definindo os anos para o loop
 anos <- c(2016,2017,2018,2019,2022,2023)
-ano <- 2017 # Selecione um único ano para rodar
+#ano <- 2017 # Selecione um único ano para rodar
 # Lista temporária para armazenar estatísticas para cada variável
 estatisticas <- list()
 estatisticas_hab <- list()
