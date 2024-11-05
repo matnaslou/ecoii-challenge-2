@@ -3,8 +3,8 @@ rm(list=ls(all=TRUE))
 library(xtable)
 library(dplyr)
 # Definindo os anos para o loop
-anos <- c(2018,2019,2022,2023)
-
+anos <- c(2016,2017,2018,2019,2022,2023)
+ano <- 2017 # Selecione um único ano para rodar
 # Lista temporária para armazenar estatísticas para cada variável
 estatisticas <- list()
 estatisticas_hab <- list()
@@ -272,7 +272,7 @@ for (ano in anos) {
                                    na.rm = TRUE))
     }
     
-    if (ano == 2016 | ano == 2017 | ano == 2018) {
+    if (ano == 2017 | ano == 2018) {
       assign(var_name3,svybys(formula=~S01001+S01002+S01003+S01004+S01005+S01006+S01010+S01011A+S01013+S010141+S01024+S01028+S010311+S010312, 
                                         by = ~Pais + GR + UF, 
                                         design = pnad_24_01_PdM, 
@@ -280,7 +280,17 @@ for (ano in anos) {
                                         vartype = c("se","cv"),
                                         keep.names = FALSE,
                                         na.rm = TRUE))
-      }
+    }
+    
+    if (ano == 2016) {
+      assign(var_name3,svybys(formula=~S01001+S01002+S01003+S01004+S01005+S01006+S01010+S01013+S010141+S01024+S01028+S010311+S010312, 
+                              by = ~Pais + GR + UF, 
+                              design = pnad_24_01_PdM, 
+                              FUN = svymean, 
+                              vartype = c("se","cv"),
+                              keep.names = FALSE,
+                              na.rm = TRUE))
+    }
     #variaveis <- c("V2007", "V2010", "VD4014","VD2006","VD5008real_ef_proprioano")
        
       var_name4 <- paste0("estats_", ano)
@@ -307,7 +317,6 @@ for (ano in anos) {
 
 numeros <- c(1,2,3)
 
-
 for (ano in anos) {
   for (x in numeros) {
     var_name5 <- paste0("contagem_",ano)
@@ -326,14 +335,14 @@ for (ano in anos) {
   }
   }
 
-contagem_1 <- bind_rows(contagem_2018_1, contagem_2019_1, contagem_2022_1,contagem_2023_1)
-contagem_2 <- bind_rows(contagem_2018_2, contagem_2019_2, contagem_2022_2,contagem_2023_2)
+contagem_1 <- bind_rows(contagem_2016_1,contagem_2017_1,contagem_2018_1, contagem_2019_1, contagem_2022_1,contagem_2023_1)
+contagem_2 <- bind_rows(contagem_2016_2,contagem_2017_2,contagem_2018_2, contagem_2019_2, contagem_2022_2,contagem_2023_2)
 contagem <- bind_rows(contagem_1,contagem_2)
-estats_1 <- bind_rows(estats_2018_1, estats_2019_1, estats_2022_1,estats_2023_1)
-estats_2 <- bind_rows(estats_2018_2, estats_2019_2, estats_2022_2,estats_2023_2)
+estats_1 <- bind_rows(estats_2016_1,estats_2017_1,estats_2018_1, estats_2019_1, estats_2022_1,estats_2023_1)
+estats_2 <- bind_rows(estats_2016_2,estats_2017_2,estats_2018_2, estats_2019_2, estats_2022_2,estats_2023_2)
 estats <- bind_rows(estats_1,estats_2)
-estats_hab_1 <- bind_rows(estats_hab2018_1,estats_hab2019_1,estats_hab2022_1)
-estats_hab_2 <- bind_rows(estats_hab2018_2,estats_hab2019_2,estats_hab2022_2)
+estats_hab_1 <- bind_rows(estats_hab2016_1,estats_hab2017_1,estats_hab2018_1,estats_hab2019_1,estats_hab2022_1)
+estats_hab_2 <- bind_rows(estats_hab2016_2,estats_hab2017_2,estats_hab2018_2,estats_hab2019_2,estats_hab2022_2)
 estats_hab <- bind_rows(estats_hab_1,estats_hab_2)
 
 write.csv(contagem,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/contagem.csv",row.names = FALSE)
