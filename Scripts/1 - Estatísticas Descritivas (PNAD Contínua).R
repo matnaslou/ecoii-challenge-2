@@ -285,7 +285,7 @@ for (ano in anos) {
                            & VD2004 != "Unipessoal")
   
   # Potential Beneficiaries: Subset of people with 14 to 24 years that receives some cash transfer, and have Primary School Completed
-  pnad_yk <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos") & (as.numeric(VD3004)== 3)
+  pnad_yk <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos") & (as.numeric(VD3004)== 3 | as.numeric(VD3004)== 4)
                            & ((VD5008real_proprioano <= salariominimo_proprioano/2 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
                            )
   
