@@ -2,9 +2,14 @@
 rm(list=ls(all=TRUE))
 library(xtable)
 library(dplyr)
+
+# Defina o caminho para armazenar
+caminho <- "C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/"
+
+
 # Definindo os anos para o loop
 anos <- c(2016,2017,2018,2019,2022,2023)
-#ano <- 2017 # Selecione um único ano para rodar
+#ano <- 2016 # Selecione um único ano para rodar
 # Lista temporária para armazenar estatísticas para cada variável
 estatisticas <- list()
 estatisticas_hab <- list()
@@ -83,13 +88,13 @@ for (ano in anos) {
   # Obtendo microdados anuais por visita da PNAD Contínua (PNADcIBGE >= 0.6.0)
   if (ano == 2023) {
     pnadc_anual_visita <- PNADcIBGE::get_pnadc(year=ano, interview=1, defyear=2023, labels=TRUE, deflator=TRUE, design=FALSE,
-                                               vars=c("UPA","V1008","V1014","Ano","Trimestre","UF","Capital","RM_RIDE","V2005",
-                                                      "V2007","V2009","V2010","V3002","V3002A","V3003A","VD2006","VD2004","VD4019",
+                                               vars=c("UPA","V1008","V1014","Ano","Trimestre","UF","Capital","RM_RIDE","V1022","V2005",
+                                                      "V2007","V2009","V2010","V3002","V3002A","V3003A","V3010","V3013","VD2002","VD2006","VD2004","VD3004","VD4019",
                                                       "VD4048","VD3005","VD4001","VD4002","VD4003","VD4014","VD4009","VD4020","VD4047","V5001A","V5002A","V5003A"))
   } else {                             
     pnadc_anual_visita <- PNADcIBGE::get_pnadc(year=ano, interview=1, defyear=2023, labels=TRUE, deflator=TRUE, design=FALSE,
-                                               vars=c("UPA","V1008","V1014","Ano","Trimestre","UF","Capital","RM_RIDE","V2005",
-                                                      "V2007","V2009","V2010","V3002","V3002A","V3003A","VD2006","VD2004","VD4019",
+                                               vars=c("UPA","V1008","V1014","Ano","Trimestre","UF","Capital","RM_RIDE","V1022","V2005",
+                                                      "V2007","V2009","V2010","V3002","V3002A","V3003A","V3010","V3013","VD2002","VD2006","VD2004","VD3004","VD4019",
                                                       "VD4048","VD3005","VD4001","VD4002","VD4003","VD4014","VD4009","VD4020","VD4047","V5001A","V5002A","V5003A",
                                                       "S01001","S01002","S01003","S01004","S01005","S01006","S01007A","S01010","S01011A","S01013",
                                                       "S010141","S01024","S01028","S010311","S010312"))
@@ -98,11 +103,22 @@ for (ano in anos) {
   gc(verbose=FALSE, reset=FALSE, full=TRUE)
   
   # Criando variáveis auxiliares para obtenção da estimativa desejada
-  pnadc_anual_visita <- transform(pnadc_anual_visita, ID_DOMICILIO=paste0(UPA,V1008,V1014))
-  pnadc_anual_visita <- transform(pnadc_anual_visita, Pais=as.factor("Brasil"))
-  pnadc_anual_visita$Pais <- factor(x=pnadc_anual_visita$Pais, levels=c("Brasil"))
-  pnadc_anual_visita <- transform(pnadc_anual_visita, GR=as.factor(ifelse(substr(UPA, start=1, stop=1)=="1","Norte",ifelse(substr(UPA, start=1, stop=1)=="2","Nordeste",ifelse(substr(UPA, start=1, stop=1)=="3","Sudeste",ifelse(substr(UPA, start=1, stop=1)=="4","Sul",ifelse(substr(UPA, start=1, stop=1)=="5","Centro-Oeste",NA)))))))
-  pnadc_anual_visita$GR <- factor(x=pnadc_anual_visita$GR, levels=c("Norte","Nordeste","Sudeste","Sul","Centro-Oeste"))
+  pnadc_anual_visita <- pnadc_anual_visita %>%
+    transform(
+      ID_DOMICILIO = paste0(UPA, V1008, V1014),
+      Pais = factor("Brasil", levels = "Brasil"),
+      GR = factor(
+        case_when(
+          substr(UPA, 1, 1) == "1" ~ "Norte",
+          substr(UPA, 1, 1) == "2" ~ "Nordeste",
+          substr(UPA, 1, 1) == "3" ~ "Sudeste",
+          substr(UPA, 1, 1) == "4" ~ "Sul",
+          substr(UPA, 1, 1) == "5" ~ "Centro-Oeste",
+          TRUE ~ NA_character_
+        ),
+        levels = c("Norte", "Nordeste", "Sudeste", "Sul", "Centro-Oeste")
+      )
+    )
   
   # Realizando processo de obtenção da estimativa do rendimento domiciliar real
   pnadc_anual_visita <- transform(pnadc_anual_visita, V2001_rendimento=ifelse(V2005=="Pensionista" | V2005=="Empregado(a) doméstico(a)" | V2005=="Parente do(a) empregado(a) doméstico(a)",NA,1))
@@ -126,7 +142,7 @@ for (ano in anos) {
   pnadc_anual_visita_rendimento <- transform(pnadc_anual_visita_rendimento, VD5007real_ultimoano=rendimento_todos_trabalhos_ultimoano+rendimento_outras_fontes_ultimoano)
   pnadc_anual_visita_rendimento <- transform(pnadc_anual_visita_rendimento, VD5008real_ultimoano=VD5007real_ultimoano/moradores_rendimento)
   pnadc_anual_visita <- pnadc_anual_visita[,!(names(pnadc_anual_visita) %in% c("V2001_rendimento","VD4019real_proprioano","VD4020real_proprioano","VD4048real_proprioano","VD4019real_ultimoano","VD4020real_ultimoano","VD4048real_ultimoano"))]
-  pnadc_anual_visita_rendimento <- pnadc_anual_visita_rendimento[,!(names(pnadc_anual_visita_rendimento) %in% c("moradores_rendimento","rendimento_todos_trabalhos_proprioano","rendimento_todos_trabalhos_ef_proprioano","rendimento_outras_fontes_proprioano","rendimento_todos_trabalhos_ultimoano","rendimento_outras_fontes_ultimoano"))]
+  pnadc_anual_visita_rendimento <- pnadc_anual_visita_rendimento[,!(names(pnadc_anual_visita_rendimento) %in% c("rendimento_todos_trabalhos_proprioano","rendimento_todos_trabalhos_ef_proprioano","rendimento_outras_fontes_proprioano","rendimento_todos_trabalhos_ultimoano","rendimento_outras_fontes_ultimoano"))]
   pnadc_anual_visita <- merge(x=pnadc_anual_visita, y=pnadc_anual_visita_rendimento, by.x="ID_DOMICILIO", by.y="ID_DOMICILIO", all.x=TRUE, all.y=FALSE)
   rm(pnadc_anual_visita_rendimento)
   pnadc_anual_visita <- transform(pnadc_anual_visita, VD5007real_proprioano=ifelse(V2005=="Pensionista" | V2005=="Empregado(a) doméstico(a)" | V2005=="Parente do(a) empregado(a) doméstico(a)",NA,VD5007real_proprioano))
@@ -184,34 +200,71 @@ for (ano in anos) {
   pnadc_anual_visita$VD5009real_proprioano <- factor(x=pnadc_anual_visita$VD5009real_proprioano, levels=c("Até ¼ salário mínimo","Mais de ¼ até ½ salário mínimo","Mais de ½ até 1 salário mínimo","Mais de 1 até 2 salários mínimos","Mais de 2 até 3 salários mínimos","Mais de 3 até 5 salários mínimos","Mais de 5 salários mínimos"))
   pnadc_anual_visita$VD5009real_ultimoano <- factor(x=pnadc_anual_visita$VD5009real_ultimoano, levels=c("Até ¼ salário mínimo","Mais de ¼ até ½ salário mínimo","Mais de ½ até 1 salário mínimo","Mais de 1 até 2 salários mínimos","Mais de 2 até 3 salários mínimos","Mais de 3 até 5 salários mínimos","Mais de 5 salários mínimos"))
   
+  # Variável de Ensino Médio, interação entre essas duas, se tem Fund. Completo
+  pnadc_anual_visita <- pnadc_anual_visita %>%
+    transform(
+      # Ensino Médio
+      em = factor(
+        case_when(
+          V3002 == "Sim" & V3003A == "Regular do ensino médio" ~ "Estuda EM", 
+          V3002 == "Não" ~ "Não Estuda EM",
+          TRUE ~ NA_character_
+        ),
+        levels = c("Estuda EM","Não Estuda EM")
+      ),
+      # Unipessoal
+      unip = factor(
+        case_when(
+          VD2004 == "Unipessoal" ~ "Unipessoal",
+          VD2004 == "Nuclear" | VD2004 == "Estendida" | VD2004 == "Composta" ~ "Não é Unipessoal",
+          TRUE ~ NA_character_
+        ),
+        levels = c("Unipessoal", "Não é Unipessoal")
+      ),
+      # Tem EF Completo?
+      ef_comp = case_when(
+        VD3004 == "Fundamental completo ou equivalente" ~ 1,
+        .default = 0
+      )
+    )
+  
+  # Educação dos Pais (Máximo entre Eles, assim como no CADÚNICO)
+  # Mother's education
+  pnadc_anual_visita <- pnadc_anual_visita %>%
+    # Passo 1: Identificar a mãe em cada família
+    mutate(is_mae = (as.numeric(V2007) == 2 & (as.numeric(VD2002) == 1 | as.numeric(VD2002) == 2 | as.numeric(VD2002) == 6)
+                       )) %>%
+    
+    # Passo 2: Agrupar pela família e criar a coluna educacao_mae
+    group_by(ID_DOMICILIO) %>%
+    mutate(educacao_mae = ifelse(any(is_mae), VD3005[is_mae][1], NA)) %>%
+    
+    # Passo 3: Remover a coluna auxiliar is_mae e desagrupar
+    select(-is_mae) %>%
+    ungroup()
+  
+  # Father Educ and Maximimum between Mother and Father
+  pnadc_anual_visita <- pnadc_anual_visita %>%
+    # Passo 1: Identificar a mãe em cada família
+    mutate(is_pai = (as.numeric(V2007) == 1 & (as.numeric(VD2002) == 1 | as.numeric(VD2002) == 2 | as.numeric(VD2002) == 6)
+                       )) %>%
+    
+    # Passo 2: Agrupar pela família e criar a coluna educacao_pai
+    group_by(ID_DOMICILIO) %>%
+    mutate(educacao_pai = ifelse(any(is_pai), VD3005[is_pai][1], NA)) %>%
+    
+    # Passo 3: Criar a coluna max_educacao_pais com o valor máximo entre educacao_mae e educacao_pai
+    mutate(max_educacao_pais = pmax(educacao_mae, educacao_pai, na.rm = TRUE)) %>%
+    
+    # Passo 4: Remover a coluna auxiliar is_pai e desagrupar
+    select(-is_pai) %>%
+    ungroup()
+  
   # Realizando processo de incorporação do desenho amostral nos microdados
   pnadc_anual_visita <- tibble::as_tibble(x=pnadc_anual_visita)
   pnadc_anual_visita <- PNADcIBGE::pnadc_design(data_pnadc=pnadc_anual_visita)
   str(object=pnadc_anual_visita)
   
-  # Calculando o rendimento médio mensal real domiciliar a preços médios do ano
-  #print(x=rendimento_domiciliar_media_proprioano <- survey::svybys(formula=~VD5007real_proprioano, bys=~Pais+GR+UF, design=subset(pnadc_anual_visita, V2005=="Pessoa responsável pelo domicílio"), FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando o rendimento médio mensal real domiciliar per capita a preços médios do ano (SIDRA - Tabela 7531)
-  #print(x=rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~Pais+GR+UF, design=pnadc_anual_visita, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando o total de pessoas nas faixas de rendimento domiciliar per capita a preços médios do ano
-  #print(x=faixa_rendimento_domiciliar_total_proprioano <- survey::svybys(formula=~VD5009real_proprioano, bys=~Pais+GR+UF, design=pnadc_anual_visita, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando a proporcao de pessoas nas faixas de rendimento domiciliar per capita a preços médios do ano
-  #print(x=faixa_rendimento_domiciliar_proporcao_proprioano <- survey::svybys(formula=~VD5009real_proprioano, bys=~Pais+GR+UF, design=pnadc_anual_visita, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando o rendimento médio mensal real domiciliar a preços médios do último ano
-  #print(x=rendimento_domiciliar_media_ultimoano <- survey::svybys(formula=~VD5007real_ultimoano, bys=~Pais+GR+UF, design=subset(pnadc_anual_visita, V2005=="Pessoa responsável pelo domicílio"), FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando o rendimento médio mensal real domiciliar per capita a preços médios do último ano (SIDRA - Tabela 7533)
-  #print(x=rendimento_domiciliar_per_capita_media_ultimoano <- survey::svybys(formula=~VD5008real_ultimoano, bys=~Pais+GR+UF, design=pnadc_anual_visita, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando o total de pessoas nas faixas de rendimento domiciliar per capita a preços médios do ultimo ano
-  #print(x=faixa_rendimento_domiciliar_total_ultimoano <- survey::svybys(formula=~VD5009real_ultimoano, bys=~Pais+GR+UF, design=pnadc_anual_visita, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-  
-  # Calculando a proporcao de pessoas nas faixas de rendimento domiciliar per capita a preços médios do ultimo ano
-  #print(x=faixa_rendimento_domiciliar_proporcao_ultimoano <- survey::svybys(formula=~VD5009real_ultimoano, bys=~Pais+GR+UF, design=pnadc_anual_visita, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
   
   ####################### Minha Parte #############################
   #rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~ID_DOMICILIO, design=pnadc_anual_visita, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE)
@@ -224,50 +277,57 @@ for (ano in anos) {
   
   
   # Subset of Pé-De-Meia beneficiaries (14 to 24 years,Goes to School,Public School,High School,HIpc less than half minimum wage and not null OR Received some social cash transfer,Not an single-person household )
-  pnad_24_01_PdM <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
+  pnad_PdM <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
                            & V3002 == "Sim"  
                            & V3002A == "Rede pública" 
                            & V3003A == "Regular do ensino médio"  
                            & ((VD5008real_proprioano <= salariominimo_proprioano/2 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
                            & VD2004 != "Unipessoal")
   
-  # Subset of people with 14 to 24 years that receives some cash transfer
-  pnad_yk <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
+  # Potential Beneficiaries: Subset of people with 14 to 24 years that receives some cash transfer, and have Primary School Completed
+  pnad_yk <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos") & (as.numeric(VD3004)== 3)
                            & ((VD5008real_proprioano <= salariominimo_proprioano/2 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
-                           & VD2004 != "Unipessoal")
+                           )
+  
+  # Removendo base da pnad para limpar o espaço um pouco
+  rm(pnadc_anual_visita)
     # Variable for Counting Observations
-  pnad_24_01_PdM <- transform(pnad_24_01_PdM, contagem=1)
+  pnad_PdM <- transform(pnad_PdM, contagem=1)
   pnad_yk <- transform(pnad_yk, contagem=1)
     # Population of Beneficiaries Estimation
-    #print(x=contagem_beneficiados <- survey::svybys(formula=~contagem, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
+    #print(x=contagem_beneficiados <- survey::svybys(formula=~contagem, bys=~Pais+GR+UF, design=pnad_PdM, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
     
+    # Criando o loop para as duas bases de dados
+    bases <- list("pnad_PdM", "pnad_yk")
+    
+    for (base in bases) {
     # Nomes da variável que será criada para cada ano
-    var_name1 <- paste0("contagem_", ano)
+    var_name1 <- paste0("contagem_", ano, "_", base)
     
     # Criando a variável `contagem_beneficiados` para cada ano usando `survey::svybys`
     assign(var_name1, survey::svybys(
       formula = ~contagem,
       by = ~Pais + GR + UF,
-      design = get(paste0("pnad_", "24", "_01_PdM")), # Obtenha o design do survey para cada ano
+      design = get(base), # Obtenha o design do survey para cada ano
       FUN = svytotal,
-      vartype = c("se", "cv"),
+      keep.var = FALSE,
       keep.names = FALSE,
       na.rm = TRUE
     ))
     
-    var_name2 <- paste0("quantil_renda_dom_pc", ano)
+    var_name2 <- paste0("quantil_renda_dom_pc", ano, "_", base)
     
-    assign(var_name2, svyquantile(x=~VD5008real_ef_proprioano, design=pnad_24_01_PdM, 
+    assign(var_name2, svyquantile(x=~VD5008real_ef_proprioano, design=get(base), 
                                   quantiles=c(0.1,0.25,0.5,0.75,0.9), ci=TRUE, na.rm=TRUE))
     
-    var_name3 <- paste0("estats_hab", ano)
+    var_name3 <- paste0("estats_hab_", ano, "_", base)
     
     if (ano == 2019 | ano == 2022) {
       assign(var_name3,svybys(formula=~S01001+S01002+S01003+S01004+S01005+S01006+S01007A+S01010+S01011A+S01013+S010141+S01024+S01028+S010311+S010312, 
                                    by = ~Pais + GR + UF, 
-                                   design = pnad_24_01_PdM, 
+                                   design = get(base), 
                                    FUN = svymean, 
-                                   vartype = c("se","cv"),
+                                   keep.var = FALSE,
                                    keep.names = FALSE,
                                    na.rm = TRUE))
     }
@@ -275,9 +335,9 @@ for (ano in anos) {
     if (ano == 2017 | ano == 2018) {
       assign(var_name3,svybys(formula=~S01001+S01002+S01003+S01004+S01005+S01006+S01010+S01011A+S01013+S010141+S01024+S01028+S010311+S010312, 
                                         by = ~Pais + GR + UF, 
-                                        design = pnad_24_01_PdM, 
+                                        design = get(base), 
                                         FUN = svymean, 
-                                        vartype = c("se","cv"),
+                                        keep.var = FALSE,
                                         keep.names = FALSE,
                                         na.rm = TRUE))
     }
@@ -285,70 +345,131 @@ for (ano in anos) {
     if (ano == 2016) {
       assign(var_name3,svybys(formula=~S01001+S01002+S01003+S01004+S01005+S01006+S01010+S01013+S010141+S01024+S01028+S010311+S010312, 
                               by = ~Pais + GR + UF, 
-                              design = pnad_24_01_PdM, 
+                              design = get(base), 
                               FUN = svymean, 
-                              vartype = c("se","cv"),
+                              keep.var = FALSE,
                               keep.names = FALSE,
                               na.rm = TRUE))
     }
     #variaveis <- c("V2007", "V2010", "VD4014","VD2006","VD5008real_ef_proprioano")
        
-      var_name4 <- paste0("estats_", ano)
+      var_name4a <- paste0("estats_a_", ano, "_", base)
     
       # Calcula a proporção para cada variável usando svyby
-      assign(var_name4, svybys(formula = ~V2007+V2010+VD4014+VD2006+VD5008real_ef_proprioano+VD4009, 
+      assign(var_name4a, svybys(formula = ~V2007+V2009+V2010+VD4014+VD2006+VD5008real_ef_proprioano+VD4009, 
                                    by = ~Pais + GR + UF, 
-                                   design = pnad_24_01_PdM, 
-                                   FUN= svymean, 
-                                   vartype = c("se","cv"),
+                                   design = get(base), 
+                                   FUN= svymean,
                                    keep.names = FALSE,
+                                   keep.var = FALSE,
                                    na.rm = TRUE))
       
-      # Adiciona o nome da variável e do ano ao resultado
-      #estatisticas[[var]] <- estatisticas[[var]] %>%
-        #mutate(variavel = var, ano = ano)
-    }
-    
-    # Combina todas as estatísticas de um ano em um único data frame
-    #resultados_por_ano[[as.character(ano)]] <- bind_rows(estatisticas)    
-    #resultados_por_ano_hab[[as.character(ano)]] <- bind_rows(estatisticas_hab)
-    # HIpc of Beneficiaries Estimation
-    #print(x=rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~Pais+GR+UF, design=pnad_24_01_PdM, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-
-numeros <- c(1,2,3)
-
-for (ano in anos) {
-  for (x in numeros) {
-    var_name5 <- paste0("contagem_",ano)
-    var_name5A <- paste0(var_name5,"_",x)
-    var_name6 <- paste0("estats_",ano)
-    var_name6A <- paste0(var_name6,"_",x)
-    var_name7 <- paste0("estats_hab",ano)
-    var_name7A <- paste0(var_name7,"_",x)
-    
-    assign(var_name5A, as.data.frame(get(var_name5)[[x]]))
-    assign(var_name6A, as.data.frame(get(var_name6)[[x]]))
-    if (ano != 2023) {
-      assign(var_name7A, as.data.frame(get(var_name7)[[x]]))
-    }
+      var_name4b <- paste0("estats_b_", ano, "_", base)
+      
+      assign(var_name4b, svybys(formula = ~moradores_rendimento+max_educacao_pais+unip+V1022+em+interaction(em,V3002A), 
+                               by = ~Pais + GR + UF, 
+                               design = get(base), 
+                               FUN= svymean,
+                               keep.names = FALSE,
+                               keep.var = FALSE,
+                               na.rm = TRUE))
+      
+      
+      # Loop para exportação
+      numeros <- c(1,2,3)
+      for (x in numeros) {
+        var_name5 <- paste0("contagem_",ano, "_", base)
+        var_name5A <- paste0(var_name5,"_",x)
+        var_name6 <- paste0("estats_a_",ano, "_", base)
+        var_name6A <- paste0(var_name6,"_",x)
+        var_name7 <- paste0("estats_b_",ano, "_", base)
+        var_name7A <- paste0(var_name7,"_",x)
+        var_name8 <- paste0("estats_hab_",ano, "_", base)
+        var_name8A <- paste0(var_name8,"_",x)
         
-  }
-  }
+        assign(var_name5A, as.data.frame(get(var_name5)[[x]]))
+        assign(var_name6A, as.data.frame(get(var_name6)[[x]]))
+        assign(var_name7A, as.data.frame(get(var_name7)[[x]]))
+        if (ano != 2023) {
+          assign(var_name8A, as.data.frame(get(var_name8)[[x]]))
+        }
+      }
+    }
+    
+    rm(list = paste0("contagem_", ano, "_pnad_PdM"))
+    rm(list = paste0("contagem_", ano, "_pnad_yk"))
+    rm(list = paste0("estats_a_", ano, "_pnad_PdM"))
+    rm(list = paste0("estats_a_", ano, "_pnad_yk"))
+    rm(list = paste0("estats_b_", ano, "_pnad_PdM"))
+    rm(list = paste0("estats_b_", ano, "_pnad_yk"))
+    rm(list = paste0("estats_hab_", ano, "_pnad_PdM"))
+    rm(list = paste0("estats_hab_", ano, "_pnad_yk"))
+    rm(list = "pnad_PdM")
+    rm(list = "pnad_yk")
+    
+    }
 
-contagem_1 <- bind_rows(contagem_2016_1,contagem_2017_1,contagem_2018_1, contagem_2019_1, contagem_2022_1,contagem_2023_1)
-contagem_2 <- bind_rows(contagem_2016_2,contagem_2017_2,contagem_2018_2, contagem_2019_2, contagem_2022_2,contagem_2023_2)
-contagem <- bind_rows(contagem_1,contagem_2)
-estats_1 <- bind_rows(estats_2016_1,estats_2017_1,estats_2018_1, estats_2019_1, estats_2022_1,estats_2023_1)
-estats_2 <- bind_rows(estats_2016_2,estats_2017_2,estats_2018_2, estats_2019_2, estats_2022_2,estats_2023_2)
-estats <- bind_rows(estats_1,estats_2)
-estats_hab_1 <- bind_rows(estats_hab2016_1,estats_hab2017_1,estats_hab2018_1,estats_hab2019_1,estats_hab2022_1)
-estats_hab_2 <- bind_rows(estats_hab2016_2,estats_hab2017_2,estats_hab2018_2,estats_hab2019_2,estats_hab2022_2)
-estats_hab <- bind_rows(estats_hab_1,estats_hab_2)
-
-write.csv(contagem,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/contagem.csv",row.names = FALSE)
-write.csv(estats,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/estats.csv",row.names = FALSE)
-write.csv(estats_hab,"C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/estats_hab.csv",row.names = FALSE)
-
-
-# Combina todos os anos em uma única tabela
-#tabela_final <- bind_rows(resultados_por_ano)
+for (base in bases) {
+  
+  contagem_1 <- bind_rows(get(paste0("contagem_2016_",base,"_1")),get(paste0("contagem_2017_",base,"_1")),
+                          get(paste0("contagem_2018_",base,"_1")),get(paste0("contagem_2019_",base,"_1")),
+                          get(paste0("contagem_2022_",base,"_1")),get(paste0("contagem_2023_",base,"_1")))
+  
+  contagem_2 <- bind_rows(get(paste0("contagem_2016_",base,"_2")),get(paste0("contagem_2017_",base,"_2")),
+                          get(paste0("contagem_2018_",base,"_2")),get(paste0("contagem_2019_",base,"_2")),
+                          get(paste0("contagem_2022_",base,"_2")),get(paste0("contagem_2023_",base,"_2")))
+  
+  contagem_3 <- bind_rows(get(paste0("contagem_2016_",base,"_3")),get(paste0("contagem_2017_",base,"_3")),
+                          get(paste0("contagem_2018_",base,"_3")),get(paste0("contagem_2019_",base,"_3")),
+                          get(paste0("contagem_2022_",base,"_3")),get(paste0("contagem_2023_",base,"_3")))
+  
+  contagem <- bind_rows(contagem_1,contagem_2,contagem_3)
+  
+  estats_1a <- bind_rows(get(paste0("estats_a_2016_",base,"_1")),get(paste0("estats_a_2017_",base,"_1")),
+                        get(paste0("estats_a_2018_",base,"_1")),get(paste0("estats_a_2019_",base,"_1")),
+                        get(paste0("estats_a_2022_",base,"_1")),get(paste0("estats_a_2023_",base,"_1")))
+  
+  estats_2a <- bind_rows(get(paste0("estats_a_2016_",base,"_2")),get(paste0("estats_a_2017_",base,"_2")),
+                        get(paste0("estats_a_2018_",base,"_2")),get(paste0("estats_a_2019_",base,"_2")),
+                        get(paste0("estats_a_2022_",base,"_2")),get(paste0("estats_a_2023_",base,"_2")))
+  
+  estats_3a <- bind_rows(get(paste0("estats_a_2016_",base,"_3")),get(paste0("estats_a_2017_",base,"_3")),
+                         get(paste0("estats_a_2018_",base,"_3")),get(paste0("estats_a_2019_",base,"_3")),
+                         get(paste0("estats_a_2022_",base,"_3")),get(paste0("estats_a_2023_",base,"_3")))
+  
+  estatsa <- bind_rows(estats_1a,estats_2a,estats_3a)
+  
+  estats_1b <- bind_rows(get(paste0("estats_b_2016_",base,"_1")),get(paste0("estats_b_2017_",base,"_1")),
+                        get(paste0("estats_b_2018_",base,"_1")),get(paste0("estats_b_2019_",base,"_1")),
+                        get(paste0("estats_b_2022_",base,"_1")),get(paste0("estats_b_2023_",base,"_1")))
+  
+  estats_2b <- bind_rows(get(paste0("estats_b_2016_",base,"_2")),get(paste0("estats_b_2017_",base,"_2")),
+                        get(paste0("estats_b_2018_",base,"_2")),get(paste0("estats_b_2019_",base,"_2")),
+                        get(paste0("estats_b_2022_",base,"_2")),get(paste0("estats_b_2023_",base,"_2")))
+  
+  estats_3b <- bind_rows(get(paste0("estats_b_2016_",base,"_3")),get(paste0("estats_b_2017_",base,"_3")),
+                         get(paste0("estats_b_2018_",base,"_3")),get(paste0("estats_b_2019_",base,"_3")),
+                         get(paste0("estats_b_2022_",base,"_3")),get(paste0("estats_b_2023_",base,"_3")))
+  
+  estatsb <- bind_rows(estats_1b,estats_2b,estats_3b)
+  
+  estats_hab_1 <- bind_rows(get(paste0("estats_hab_2016_",base,"_1")),get(paste0("estats_hab_2017_",base,"_1")),
+                            get(paste0("estats_hab_2018_",base,"_1")),get(paste0("estats_hab_2019_",base,"_1")),
+                            get(paste0("estats_hab_2022_",base,"_1")))
+  
+  estats_hab_2 <- bind_rows(get(paste0("estats_hab_2016_",base,"_2")),get(paste0("estats_hab_2017_",base,"_2")),
+                            get(paste0("estats_hab_2018_",base,"_2")),get(paste0("estats_hab_2019_",base,"_2")),
+                            get(paste0("estats_hab_2022_",base,"_2")))
+  
+  estats_hab_3 <- bind_rows(get(paste0("estats_hab_2016_",base,"_3")),get(paste0("estats_hab_2017_",base,"_3")),
+                            get(paste0("estats_hab_2018_",base,"_3")),get(paste0("estats_hab_2019_",base,"_3")),
+                            get(paste0("estats_hab_2022_",base,"_3")))
+  
+  estats_hab <- bind_rows(estats_hab_1,estats_hab_2,estats_hab_3)
+  
+  write.csv(contagem,paste0(caminho, "contagem_", base, ".csv"),row.names = FALSE)
+  write.csv(estatsa,paste0(caminho, "estats_a_", base, ".csv"),row.names = FALSE)
+  write.csv(estatsb,paste0(caminho, "estats_b_", base, ".csv"),row.names = FALSE)
+  write.csv(estats_hab,paste0(caminho, "estats_hab_", base, ".csv"),row.names = FALSE)
+  
+}
