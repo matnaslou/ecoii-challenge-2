@@ -9,10 +9,9 @@ caminho <- "C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/"
 
 # Definindo os anos para o loop
 anos <- c(2016,2017,2018,2019,2022,2023)
-#ano <- 2016 # Selecione um único ano para rodar
-# Lista temporária para armazenar estatísticas para cada variável
-estatisticas <- list()
-estatisticas_hab <- list()
+ano <- 2016 # Selecione um único ano, se quiser rodar para teste
+
+
 # Loop para cada ano
 for (ano in anos) {  
   
@@ -267,15 +266,6 @@ for (ano in anos) {
   
   
   ####################### Minha Parte #############################
-  #rendimento_domiciliar_per_capita_media_proprioano <- survey::svybys(formula=~VD5008real_proprioano, bys=~ID_DOMICILIO, design=pnadc_anual_visita, FUN=svymean, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE)
-  
-  # Transformando o resultado em um data frame
-  #rendimento_df <- as.data.frame(rendimento_domiciliar_per_capita_media_proprioano)
-  
-  # Renomeando a coluna com o valor da média para um nome mais claro
-  #names(rendimento_df)[names(rendimento_df) == "VD5008real_proprioano"] <- "rendimento_domiciliar_per_capita_media_proprioano"
-  
-  
   # Subset of Pé-De-Meia beneficiaries (14 to 24 years,Goes to School,Public School,High School,HIpc less than half minimum wage and not null OR Received some social cash transfer,Not an single-person household )
   pnad_PdM <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
                            & V3002 == "Sim"  
@@ -294,10 +284,8 @@ for (ano in anos) {
     # Variable for Counting Observations
   pnad_PdM <- transform(pnad_PdM, contagem=1)
   pnad_yk <- transform(pnad_yk, contagem=1)
-    # Population of Beneficiaries Estimation
-    #print(x=contagem_beneficiados <- survey::svybys(formula=~contagem, bys=~Pais+GR+UF, design=pnad_PdM, FUN=svytotal, vartype=c("se","cv"), keep.names=FALSE, na.rm=TRUE))
-    
-    # Criando o loop para as duas bases de dados
+
+    # Criando o loop para cálculo das duas bases de dados
     bases <- list("pnad_PdM", "pnad_yk")
     
     for (base in bases) {
