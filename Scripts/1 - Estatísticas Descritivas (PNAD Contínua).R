@@ -9,7 +9,7 @@ caminho <- "C:/Users/rosan/OneDrive/Área de Trabalho/Eco II/Desafio/"
 
 # Definindo os anos para o loop
 anos <- c(2016,2017,2018,2019,2022,2023)
-ano <- 2016 # Selecione um único ano, se quiser rodar para teste
+#ano <- 2016 # Selecione um único ano, se quiser rodar para teste
 
 
 # Loop para cada ano
@@ -51,8 +51,8 @@ for (ano in anos) {
   rm(aviso)
   
   # Definindo diretório de trabalho
-  caminho <- getwd()
-  setwd(dir=caminho)
+  #caminho <- getwd()
+  #setwd(dir=caminho)
   
   # Carregando pacotes necessários para obtenção da estimativa desejada
   if("PNADcIBGE" %in% rownames(installed.packages())==FALSE)
@@ -279,14 +279,25 @@ for (ano in anos) {
                            & ((VD5008real_proprioano <= salariominimo_proprioano/2 & !is.na(VD5008real_proprioano)|V5001A=="Sim"|V5002A=="Sim"|V5003A=="Sim")) 
                            )
   
+  # School Students
+  pnad_stud <- subset(pnadc_anual_visita, (VD2006 == "14 a 19 anos" | VD2006 == "20 a 24 anos")
+                      & V3002 == "Sim" & V3002A == "Rede pública"
+                        )
+  
+  
+  # General Population
+  pnad <- pnadc_anual_visita
+  
   # Removendo base da pnad para limpar o espaço um pouco
   rm(pnadc_anual_visita)
     # Variable for Counting Observations
   pnad_PdM <- transform(pnad_PdM, contagem=1)
   pnad_yk <- transform(pnad_yk, contagem=1)
-
+  pnad_stud <- transform(pnad_stud, contagem=1)
+  pnad <- transform(pnad, contagem=1)
+  
     # Criando o loop para cálculo das duas bases de dados
-    bases <- list("pnad_PdM", "pnad_yk")
+    bases <- list("pnad_PdM", "pnad_yk", "pnad_stud", "pnad")
     
     for (base in bases) {
     # Nomes da variável que será criada para cada ano
@@ -344,7 +355,7 @@ for (ano in anos) {
       var_name4a <- paste0("estats_a_", ano, "_", base)
     
       # Calcula a proporção para cada variável usando svyby
-      assign(var_name4a, svybys(formula = ~V2007+V2009+V2010+VD4014+VD2006+VD5008real_ef_proprioano+VD4009, 
+      assign(var_name4a, svybys(formula = ~V2007+V2009+V2010+VD5008real_ef_proprioano, 
                                    by = ~Pais + GR + UF, 
                                    design = get(base), 
                                    FUN= svymean,
