@@ -1,13 +1,14 @@
 library(PNADcIBGE)
 library(dplyr)
 library(stringr)
-
+library(lmtest)
+library(margins)
 ################################ Abandonment Rate ################################
 ano <- 2023
 t <- 1
 var <- c("UPA","V1008","V1014","V1016","V1022","V2003","V2009","Ano","Trimestre","UF","Capital",
          "RM_RIDE","V2005","V2007","V2010","V2008","V20081","V20082","V3002",
-         "V3002A","V3003A","V3004","V3005A","V3006","V3009","V3014","VD2004","VD3005","VD4002","VD4020"
+         "V3002A","V3003A","V3004","V3005A","V3006","V3009A","V3013","V3014","VD2002","VD2004","VD3005","VD4002","VD4020"
          )
 
 # Salário Mínimo
@@ -132,7 +133,7 @@ pnad <- pnad %>%
   )) %>%
   
   # Passo 2: Agrupar pela família e criar a coluna educacao_mae
-  group_by(id_domicilio) %>%
+  group_by(Trimestre,id_domicilio) %>%
   mutate(educacao_mae = ifelse(any(is_mae), VD3005[is_mae][1], NA)) %>%
   
   # Passo 3: Remover a coluna auxiliar is_mae e desagrupar
@@ -146,8 +147,8 @@ pnad <- pnad %>%
   )) %>%
   
   # Passo 2: Agrupar pela família e criar a coluna educacao_pai
-  group_by(ID_DOMICILIO) %>%
-  mutate(id_domicilio = ifelse(any(is_pai), VD3005[is_pai][1], NA)) %>%
+  group_by(Trimestre,id_domicilio) %>%
+  mutate(educacao_pai = ifelse(any(is_pai), VD3005[is_pai][1], NA)) %>%
   
   # Passo 3: Criar a coluna max_educacao_pais com o valor máximo entre educacao_mae e educacao_pai
   mutate(max_educacao_pais = pmax(educacao_mae, educacao_pai, na.rm = TRUE)) %>%
@@ -155,7 +156,6 @@ pnad <- pnad %>%
   # Passo 4: Remover a coluna auxiliar is_pai e desagrupar
   select(-is_pai) %>%
   ungroup()
-
 
 
 # Contar as ocorrências de cada id_pessoa
@@ -208,12 +208,23 @@ pnad$em <- ifelse(pnad$estuda == 1 &
                   )
 pnad$empub <- ifelse(pnad$em == 1 & pnad$publica == 1, 1, 0)
 
+# Criar a variável 'conclusão'
+pnad <- pnad %>%
+  arrange(id_pessoa, Trimestre) %>%  # Ordenar por pessoa e trimestre
+  group_by(id_pessoa) %>%  # Agrupar por id_pessoa
+  mutate(
+    conclusao = ifelse(as.numeric(V3009A) == 10 & lag(as.numeric(V3003A)) == 6 
+                       & as.numeric(V3013) == lag(as.numeric(V3006)) & V3014 == "Sim",
+                       1, 0)  # Verifica se estuda passou de 1 para 0
+  ) %>%
+  ungroup()  # Remover agrupamento
+
 # Criar a variável 'abandono'
 pnad <- pnad %>%
   arrange(id_pessoa, Trimestre) %>%  # Ordenar por pessoa e trimestre
   group_by(id_pessoa) %>%  # Agrupar por id_pessoa
   mutate(
-    abandono = ifelse(estuda == 0 & lag(estuda) == 1, 1, 0)  # Verifica se estuda passou de 1 para 0
+    abandono = ifelse(estuda == 0 & lag(estuda) == 1 & conclusao != 1, 1, 0)  # Verifica se estuda passou de 1 para 0
   ) %>%
   ungroup()  # Remover agrupamento
 
@@ -255,3 +266,40 @@ pnad_com_abandono <- pnad %>%
   mutate(abandono_seguinte = lead(abandono)) %>%  # Variável que indica abandono no trimestre seguinte
   filter(abandono_seguinte == 1) %>%  # Filtrar linhas cujo próximo trimestre é abandono
   ungroup()  # Remover o agrupamento
+
+pnad_q12 <- pnad %>%
+  filter(Trimestre == 1 | Trimestre == 2)
+
+# Filtrar id_individuo que aparecem nos dois Trimestres
+pnad_q12a <- pnad_q12 %>%
+  group_by(id_pessoa) %>%
+  filter(all(c(1, 2) %in% Trimestre)) %>%
+  ungroup()
+
+pnad_q12_14a24 <- pnad_q12a %>%
+  # Filtrar pessoas de 14 a 24 anos
+  filter(V2009 >= 14 & V2009 <= 24)
+
+pnad_q12_em <- pnad_q12_14a24 %>%
+  group_by(id_pessoa) %>% # Substitua pelo identificador único do indivíduo na base
+  filter(any(em == 1 & (Trimestre == 1 | Trimestre == 2))) %>%
+  ungroup()
+
+pnad_q12_empub <- pnad_q12_14a24 %>%
+  group_by(id_pessoa) %>% # Substitua pelo identificador único do indivíduo na base
+  filter(any(empub == 1 & (Trimestre == 1 | Trimestre == 2))) %>%
+  ungroup()
+
+
+
+# Probit
+probit12 <- glm(abandono ~ V2007+V2010+V2009+V1022+max_educacao_pais+rpc+n_moradores, 
+                  family = binomial(link = "probit"), 
+                  data = pnad_q12a)
+
+coeftest(probit12, type = "HC1")
+
+#margins_probit <- margins(probit12)
+#summary(margins_probit)
+
+#pnadc_anual_visita <- PNADcIBGE::pnadc_design(data_pnadc=pnadc_anual_visita)
