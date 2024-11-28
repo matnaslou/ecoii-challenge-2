@@ -290,12 +290,23 @@ pnad_q12_empub <- pnad_q12_14a24 %>%
   filter(any(empub == 1 & (Trimestre == 1 | Trimestre == 2))) %>%
   ungroup()
 
+pnad_14a24 <- pnad %>%
+  filter(V2009 >= 14 & V2009 <= 24)
 
+pnad_em <- pnad_14a24 %>%
+  group_by(id_pessoa) %>%
+  filter(any(em == 1)) %>%
+  ungroup()
+
+pnad_empub <- pnad_em %>%
+  group_by(id_pessoa) %>%
+  filter(empub == 1) %>%
+  ungroup()
 
 # Probit
 probit12 <- glm(abandono ~ V2007+V2010+V2009+V1022+max_educacao_pais+rpc+n_moradores, 
                   family = binomial(link = "probit"), 
-                  data = pnad_q12a)
+                  data = pnad)
 
 coeftest(probit12, type = "HC1")
 
