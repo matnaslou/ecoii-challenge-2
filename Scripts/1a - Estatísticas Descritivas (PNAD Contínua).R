@@ -1,5 +1,6 @@
 ##########################################################################
 rm(list=ls(all=TRUE))
+gc()
 library(xtable)
 library(dplyr)
 library(survey)
@@ -11,7 +12,7 @@ anos <- c(2016,2017,2018,2019,2022,2023)
 # Lista para armazenar os resultados
 resultados <- list()
 
-ano <- 2016
+#ano <- 2016
 # Loop para cada ano
 for (ano in anos) {  
   # Construir o caminho do arquivo
@@ -72,16 +73,53 @@ for (ano in anos) {
     0   # Valor se as condições não forem satisfeitas
   )
   
-  design <- pnadc_design(dados)
+  dados$PB <- ifelse((dados$VD2006 == "14 a 19 anos" | dados$VD2006 == "20 a 24 anos") &
+                       (as.numeric(dados$VD3004)== 3 | as.numeric(dados$VD3004)== 4) &
+                      (
+                        (dados$VD5008real_proprioano <= dados$salariominimo_proprioano/2 &
+                        !is.na(dados$VD5008real_proprioano)|
+                          dados$V5001A=="Sim"|
+                          dados$V5002A=="Sim"|
+                          dados$V5003A=="Sim")),
+                     1,
+                     0)
   
+  dados$stu <- ifelse((
+                        dados$VD2006 == "14 a 19 anos" | 
+                        dados$VD2006 == "20 a 24 anos") &
+                        dados$V3002 == "Sim" & dados$V3002A == "Rede pública",1,0)
+  total_PdM <- sum(dados$contagem[dados$PdM==1])
+  total_PB <- sum(dados$contagem[dados$PB==1])
+  total_stu <- sum(dados$contagem[dados$stu==1])
+  
+  design <- pnadc_design(dados)
+  design_PdM <- subset(design, PdM == 1)
+  design_PB <- subset(design, PB == 1)
+  design_stu <- subset(design, stu == 1)
   # Calcular o percentual de mulheres
   totais <- svybys(formula = ~PdM, by = ~Pais + GR + UF, design = design,
                    FUN = svytotal)
+  totais_PB <- svytotal(x=~PB,design=design_PB, na.rm=TRUE)
+  totais_stu <- svytotal(x=~stu,design=design_stu, na.rm=TRUE)
   prop_mulheres <- svymean(~I(V2007 == "Mulher"), design = design)
+  
   prop_raca <- svymean(~I(nao_branco == 1), design = design)
+  
+  renda_pc <- svybys(formula = ~VD5008real_ef_proprioano, 
+                     by = ~Pais + GR, 
+                     design = design_PdM, 
+                     FUN= svymean, 
+                     keep.names = FALSE,
+                     na.rm = TRUE)
+
   # Armazenar os resultados
   resultados[[as.character(ano)]] <- data.frame(
     ano = ano,
+    total_PdM = total_PdM,
+    total_PB = total_PB,
+    total_stu = total_stu,
+    tot_pond_PB = totais_PB[[1]],
+    tot_pond_stu = totais_stu[[1]],
     perc_mulheres = round(coef(prop_mulheres)[2],3) * 100, # Convertendo para %
     se_perc_mulheres = round(SE(prop_mulheres)[2],4),
     perc_raca = round(coef(prop_raca)[2],3) * 100,
@@ -96,7 +134,19 @@ for (ano in anos) {
     total_sul = coef(totais[[2]])[4],
     se_tot_sul = round(SE(totais[[2]])[4],4),
     total_co = coef(totais[[2]])[5],
-    se_tot_co = round(SE(totais[[2]])[5],4)
+    se_tot_co = round(SE(totais[[2]])[5],4),
+    rpc_br = coef(renda_pc[[1]])[1],
+    se_rpc_br = SE(renda_pc[[1]])[1],
+    rpc_norte = coef(renda_pc[[2]])[1],
+    se_rpc_norte = round(SE(renda_pc[[2]])[1],4),
+    rpc_nordeste = coef(renda_pc[[2]])[2],
+    se_rpc_nordeste = round(SE(renda_pc[[2]])[2],4),
+    rpc_sudeste = coef(renda_pc[[2]])[3],
+    se_rpc_sudeste = round(SE(renda_pc[[2]])[3],4),
+    rpc_sul = coef(renda_pc[[2]])[4],
+    se_rpc_sul = round(SE(renda_pc[[2]])[4],4),
+    rpc_co = coef(renda_pc[[2]])[5],
+    se_rpc_co = round(SE(renda_pc[[2]])[5],4)
   )
   
 }
