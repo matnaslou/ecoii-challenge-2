@@ -12,7 +12,7 @@ anos <- c(2016,2017,2018,2019,2022,2023)
 # Lista para armazenar os resultados
 resultados <- list()
 
-#ano <- 2016
+#ano <- 2023
 # Loop para cada ano
 for (ano in anos) {  
   # Construir o caminho do arquivo
@@ -88,6 +88,7 @@ for (ano in anos) {
                         dados$VD2006 == "14 a 19 anos" | 
                         dados$VD2006 == "20 a 24 anos") &
                         dados$V3002 == "Sim" & dados$V3002A == "Rede pública",1,0)
+  
   total_PdM <- sum(dados$contagem[dados$PdM==1])
   total_PB <- sum(dados$contagem[dados$PB==1])
   total_stu <- sum(dados$contagem[dados$stu==1])
@@ -97,13 +98,13 @@ for (ano in anos) {
   design_PB <- subset(design, PB == 1)
   design_stu <- subset(design, stu == 1)
   # Calcular o percentual de mulheres
-  totais <- svybys(formula = ~PdM, by = ~Pais + GR + UF, design = design,
+  totais <- svybys(formula = ~PdM, by = ~Pais + GR, design = design_PdM,
                    FUN = svytotal)
   totais_PB <- svytotal(x=~PB,design=design_PB, na.rm=TRUE)
   totais_stu <- svytotal(x=~stu,design=design_stu, na.rm=TRUE)
-  prop_mulheres <- svymean(~I(V2007 == "Mulher"), design = design)
   
-  prop_raca <- svymean(~I(nao_branco == 1), design = design)
+  prop_mulheres <- svymean(~I(V2007 == "Mulher"), design = design_PdM)
+  prop_raca <- svymean(~I(nao_branco == 1), design = design_PdM, na.rm = TRUE)
   
   renda_pc <- svybys(formula = ~VD5008real_ef_proprioano, 
                      by = ~Pais + GR, 
@@ -123,6 +124,7 @@ for (ano in anos) {
     perc_mulheres = round(coef(prop_mulheres)[2],3) * 100, # Convertendo para %
     se_perc_mulheres = round(SE(prop_mulheres)[2],4),
     perc_raca = round(coef(prop_raca)[2],3) * 100,
+    se_perc_raca = round(SE(prop_raca)[2],4),
     total_br = coef(totais[[1]])[1],
     se_tot_br = SE(totais[[1]])[1],
     total_norte = coef(totais[[2]])[1],
@@ -148,5 +150,7 @@ for (ano in anos) {
     rpc_co = coef(renda_pc[[2]])[5],
     se_rpc_co = round(SE(renda_pc[[2]])[5],4)
   )
-  
+  rm(dados,design,design_PdM,design_PB,design_stu,renda_pc,totais,total_PdM,prop_mulheres,prop_raca)
+  gc()
 }
+
