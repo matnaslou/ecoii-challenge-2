@@ -235,8 +235,8 @@ base_filtrada$anos_trab <- ifelse(
 base_filtrada$s <- base_filtrada$anos_estud_predito - 9
 base_filtrada$s_PdM <- base_filtrada$VD3005_estimada_PdM - 9
 
-base_filtrada$v1 <- (1 / 1.02)^base_filtrada$s * ((40 * base_filtrada$fit_D1 * base_filtrada$w1) / (1.02^base_filtrada$anos_trab))
-base_filtrada$v2 <- (1 / 1.02)^base_filtrada$s_PdM * ((40 * base_filtrada$fit_D2 * base_filtrada$w2) / (1.02^base_filtrada$anos_trab))
+base_filtrada$v1 <- (1 / 1.02)^base_filtrada$s * ((base_filtrada$anos_trab * base_filtrada$fit_D1 * base_filtrada$w1) / (1.02^base_filtrada$anos_trab))
+base_filtrada$v2 <- (1 / 1.02)^base_filtrada$s_PdM * ((base_filtrada$anos_trab * base_filtrada$fit_D2 * base_filtrada$w2) / (1.02^base_filtrada$anos_trab))
 base_filtrada$delta_v <- base_filtrada$v2 - base_filtrada$v1
 base_filtrada$custo <- (1 / 1.02)^base_filtrada$s_PdM * (2000) * base_filtrada$s_PdM + (1 / 1.02)^base_filtrada$s_PdM * (1000) * as.integer(base_filtrada$s_PdM)
 
